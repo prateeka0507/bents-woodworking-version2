@@ -7,7 +7,7 @@ const app = express();
 const port = 5002;
 
 const corsOptions = {
-  origin: ['https://www.bentsassistant.com','https://bents-model-backend.vercel.app'],
+  origin: ['http://localhost:5173','http://localhost:5002'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
@@ -29,7 +29,40 @@ app.use(bodyParser.json());
 
 
 // Flask backend URL
-const FLASK_BACKEND_URL = 'https://bents-model-phi.vercel.app';
+const FLASK_BACKEND_URL = 'http://localhost:5000';
+
+
+app.post('/api/save-conversation', async (req, res) => {
+  try {
+    const { userId, selectedIndex, conversations } = req.body;
+    const { rows } = await pool.query(
+      'INSERT INTO conversation_history (user_id, selected_index, conversations) VALUES ($1, $2, $3) ON CONFLICT (user_id) DO UPDATE SET selected_index = $2, conversations = $3 RETURNING *',
+      [userId, selectedIndex, JSON.stringify(conversations)]
+    );
+    res.json(rows[0]);
+  } catch (error) {
+    console.error('Error saving conversation history:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get conversation history
+app.get('/api/get-conversation/:userId', async (req, res) => {
+  try {
+    const { rows } = await pool.query('SELECT * FROM conversation_history WHERE user_id = $1', [req.params.userId]);
+    if (rows.length > 0) {
+      res.json(rows[0]);
+    } else {
+      res.status(404).json({ message: 'Conversation history not found' });
+    }
+  } catch (error) {
+    console.error('Error fetching conversation history:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+
+
 
 // Get user data
 app.get('/api/user/:userId', async (req, res) => {
@@ -65,8 +98,21 @@ app.get("/", (req, res) => {
   res.send("Server is running");
 });
 
-
-
+app.get('/api/random-questions', async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT id, question_text 
+      FROM questions 
+      ORDER BY RANDOM() 
+      LIMIT 3
+    `);
+    
+    res.json(rows);
+  } catch (error) {
+    console.error('Error fetching random questions:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 
 // Route to handle contact form submission
 app.post('/contact', async (req, res) => {

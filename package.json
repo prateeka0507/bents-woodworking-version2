@@ -1,0 +1,10 @@
+{
+    "dependencies": {
+      "@clerk/clerk-react": "^5.11.0",
+      "@clerk/clerk-sdk-node": "^5.0.48",
+      "axios": "^1.7.7",
+      "dotenv": "^16.4.5",
+      "svix": "^1.37.0"
+    }
+  }
+  
